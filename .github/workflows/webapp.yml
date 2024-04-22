@@ -29,7 +29,7 @@ jobs:
 
       - name: Publish Dev environment
         run: |
-          echo "DEPLOYMENT_URL=Dev" 
+          echo "DEPLOYMENT_URL=Dev" ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
   deploy-prod:
     runs-on: 'ubuntu-latest'
@@ -39,4 +39,4 @@ jobs:
 
       - name: Publish Dev environment
         run: |
-          echo "DEPLOYMENT_URL=Dev" 
+          echo "DEPLOYMENT_URL= Prod" ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} 
