@@ -36,6 +36,6 @@ jobs:
     needs: [build-and-publish, deploy-dev]
     steps:
 
-      - name: Publish Dev environment
+      - name: Publish Prod environment
         run: |
           echo "DEPLOYMENT_URL= Prod" 
