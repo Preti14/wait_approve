@@ -1,4 +1,4 @@
-# GitHub Actions Manual Approvals for preti
+# GitHub Actions Manual Approvals for preti Mohanraj
 
 Code sample for utilizing GitHub Actions with Environments, enabling manual approvals, and environment specific secrets.
 
