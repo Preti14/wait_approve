@@ -1,40 +1,123 @@
-name: 'Deploy ASP.NET Core app to Azure Web App1'
+name: terraform
 
 on:
   push:
     branches:
-      - "main"
+      - main
+    paths-ignore:
+      - 'CHANGELOG.md'
 
-env:
-  DOTNET_VERSION: '3.1.404'
+  pull_request:
+    branches:
+      - main
 
+permissions:
+  id-token: write
+  contents: write
+  actions: write
+  packages: write
+  security-events: write
+  pull-requests: write
 
 jobs:
-  build-and-publish:
+  plan:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - dev
+
+    environment: ${{ matrix.environment }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      # Checkout the repo
-      - uses: actions/checkout@master
-      
-      - name: Build and plan
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.3.9"
+
+      - name: Terraform version
+        id: version
+        shell: bash
+        run: terraform version
+
+      - name: Terraform Init
+        id: init
+        shell: bash
+        run: terraform init -no-color
+
+      - name: Terraform Validate
+        id: validate
+        shell: bash
         run: |
-          echo "DEPLOYMENT_URL = Build and plan" 
+           terraform validate -no-color
 
-  deploy-dev:
-    runs-on: 'ubuntu-latest'
-    environment: 'dev'
-    needs: build-and-publish
-    steps:
-
-      - name: Publish Dev environment
+      - name: Terraform Plan
+        id: plan
         run: |
-          echo "DEPLOYMENT_URL=Dev" 
-  deploy-prod:
-    runs-on: 'ubuntu-latest'
-    needs: [build-and-publish, deploy-dev]
-    steps:
+           echo "DEPLOYMENT_URL=" ${{ matrix.environment }}
 
-      - name: Publish Prod environment
-        run: |
-          echo "DEPLOYMENT_URL= Prod" ${{ secrets.test }}
+      - name: Publish Plan to PR comment
+        uses: actions/github-script@v6
+        steps:
+          - name: Publish Dev environment
+            run: |
+                echo "DEPLOYMENT_URL=" ${{ matrix.environment }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: ${{ matrix.environment }}-plan
+          path: ${{ matrix.environment }}.plan
+          retention-days: 30
+
+  apply:
+    name: Apply
+    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        environment:
+            - dev
+    needs:
+      - plan
+    with:
+      terraform_version: "1.3.9"
+      terraform_environment: ${{ matrix.environment }}
+      terraform_lock_timeout: "600s"
+      use_fedid: true
+      use_github_pat: true
+      upgrade_provider: true
+      whitelist_runnerIp_to_vault: true
+    secrets: inherit
+ 
+  tst_apply:
+    name: Apply
+    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        environment:
+            - prod            
+    needs:
+      - plan
+    with:
+      terraform_version: "1.3.9"
+      terraform_environment: ${{ matrix.environment }}
+      terraform_lock_timeout: "600s"
+      use_fedid: true
+      use_github_pat: true
+      upgrade_provider: true
+      whitelist_runnerIp_to_vault: true
+    secrets: inherit
+
+  release:
+    name: Release
+    needs:
+        - apply
+    secrets: inherit
