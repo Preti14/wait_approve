@@ -23,7 +23,7 @@ jobs:
 
   deploy-dev:
     runs-on: 'ubuntu-latest'
-    environment: 'prod'
+    environment: 'dev'
     needs: build-and-publish
     steps:
 
@@ -32,10 +32,9 @@ jobs:
           echo "DEPLOYMENT_URL=Dev" 
   deploy-prod:
     runs-on: 'ubuntu-latest'
-    environment: 'prod'
     needs: [build-and-publish, deploy-dev]
     steps:
 
       - name: Publish Prod environment
         run: |
-          echo "DEPLOYMENT_URL= Prod" 
+          echo "DEPLOYMENT_URL= Prod" ${{ secrets.test }}
